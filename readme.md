@@ -14,3 +14,11 @@ Bob is the meaning of a designated driver for the night, always having the troub
 
 It picks all the people who have been assigned the least amount of times and picks a random user from that list.
 
+## Work in progress
+
+- [ ] Unittests
+- [ ] Creating a monorepo with React-native & Storybook
+- [ ] Containerizing the project using Docker
+- [ ] researching how to create migrations
+- [ ] Adding roles to users
+- [ ] Inviting users using an email, instead of always adding a user to a group based on given id
