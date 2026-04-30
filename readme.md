@@ -1,3 +1,11 @@
+## Important notice!
+
+I know you are not supposed to have the `application.properties` commited, but because everything is running locally and I do not have any intent of using api keys / any remote content for now.
+
+I have committed the `application.properties` file so you do not have to set this up.
+
+It is possible I will change my decision in the future and actually expose api keys in the file, but then it will be removed from the repo!
+
 ## Description
 
 A 'Wie is bob' project, which allows you to:
@@ -13,6 +21,14 @@ A 'Wie is bob' project, which allows you to:
 Bob is the meaning of a designated driver for the night, always having the trouble who should be the designated driver? let the wheel spin!
 
 It picks all the people who have been assigned the least amount of times and picks a random user from that list.
+
+## Getting started
+
+Since I do not have any migrations yet, you are going to have to create the database manually:
+
+1. Create a database called WieIsBob
+2. use the sql queries stated in `tables.sql`
+3. Adjust the variables in application.properties to your own database username & password
 
 ## Work in progress
 
