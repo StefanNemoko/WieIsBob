@@ -19,11 +19,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,6 +37,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @AutoConfigureJsonTesters
 @Transactional
+@Sql(
+        statements = {
+                "ALTER TABLE users ALTER COLUMN id RESTART WITH 1",
+                "ALTER TABLE bob_groups ALTER COLUMN id RESTART WITH 1",
+                "ALTER TABLE bob_assignments ALTER COLUMN id RESTART WITH 1",
+                "ALTER TABLE tokens ALTER COLUMN id RESTART WITH 1"
+        },
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
+        config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED)
+)
 class BobAssignmentControllerTest extends BaseTest {
 
     @Autowired
@@ -84,6 +99,10 @@ class BobAssignmentControllerTest extends BaseTest {
     void assignBob_OkResponse_WhenUserIsMemberOfGroup() throws Exception {
         BobAssignmentRequest request = new BobAssignmentRequest(LocalDateTime.now());
 
+        // Add authenticated user as a member so authorize() passes
+        group.setMembers(new ArrayList<>(List.of(authenticatedUser)));
+        group = groupRepository.save(group);
+
         // Create a bob assignment record
         BobAssignment bobAssignment = new BobAssignment();
         bobAssignment.setUser(authenticatedUser);
@@ -126,5 +145,42 @@ class BobAssignmentControllerTest extends BaseTest {
                         .content("{}")
                         .header("Authorization", "Bearer " + bearerToken))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deleteBobAssignment_ReturnsOk_WhenUserIsMemberOfGroup() throws Exception {
+        // Add authenticated user as a member so authorize() passes
+        group.setMembers(new ArrayList<>(List.of(authenticatedUser)));
+        group = groupRepository.save(group);
+
+        BobAssignment bobAssignment = new BobAssignment();
+        bobAssignment.setUser(authenticatedUser);
+        bobAssignment.setGroup(group);
+
+        when(bobAssignmentService.getOneById(1L)).thenReturn(bobAssignment);
+
+        mockMvc.perform(delete("/bobassignment/1")
+                        .header("Authorization", "Bearer " + bearerToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deleteBobAssignment_ReturnsUnauthorized_WhenUserIsNotMemberOfGroup() throws Exception {
+        // group has no members, so existsByIdAndMembersId returns false
+        BobAssignment bobAssignment = new BobAssignment();
+        bobAssignment.setUser(authenticatedUser);
+        bobAssignment.setGroup(group);
+
+        when(bobAssignmentService.getOneById(1L)).thenReturn(bobAssignment);
+
+        mockMvc.perform(delete("/bobassignment/1")
+                        .header("Authorization", "Bearer " + bearerToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deleteBobAssignment_ReturnsUnauthorized_WhenNoToken() throws Exception {
+        mockMvc.perform(delete("/bobassignment/1"))
+                .andExpect(status().isUnauthorized());
     }
 }
