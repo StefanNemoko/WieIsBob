@@ -24,17 +24,10 @@ It picks all the people who have been assigned the least amount of times and pic
 
 ## Getting started
 
-Since I do not have any migrations yet, you are going to have to create the database manually:
-
-1. Create a database called WieIsBob
-2. use the sql queries stated in `tables.sql`
-3. Adjust the variables in application.properties to your own database username & password
 
 ## Work in progress
 
-- [ ] Unittests
 - [ ] Creating a monorepo with React-native & Storybook
 - [ ] Containerizing the project using Docker
 - [ ] researching how to create migrations
-- [ ] Adding roles to users
 - [ ] Inviting users using an email, instead of always adding a user to a group based on given id
