@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface GroupRepository extends JpaRepository<Group,Long> {
-    List<Group> findByMembersId(Long membersId);
-    boolean existsByIdAndMembersId(Long groupId, Long userId);
+public interface GroupRepository extends JpaRepository<Group, Long> {
+
+    List<Group> findByMembershipsUserId(Long userId);
 }

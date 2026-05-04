@@ -14,9 +14,10 @@ import java.util.List;
 public class GroupService {
 
     private final GroupRepository groupRepository;
+    private final GroupMembershipRepository groupMembershipRepository;
 
     public List<GroupResponse> GetAllByUserId(Long userId) {
-        return groupRepository.findByMembersId(userId)
+        return groupRepository.findByMembershipsUserId(userId)
                 .stream()
                 .map(group -> new GroupResponse(
                         group.getId(),
@@ -27,20 +28,24 @@ public class GroupService {
     }
 
     public Group getOneById(Long groupId) {
-        return groupRepository.findById(groupId).orElseThrow(()->new IllegalArgumentException("Group not found"));
+        return groupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
     }
 
     public Group Create(CreateGroupRequest request) {
         Group group = new Group();
         group.setName(request.name());
-        group.setMembers(new ArrayList<>());
+        group.setMemberships(new ArrayList<>());
 
         return groupRepository.save(group);
     }
 
-    public void AddUserToGroup(User user, Group group) {
-        group.getMembers().add(user);
-        groupRepository.save(group);
+    public void AddUserToGroup(User user, Group group, GroupRole role) {
+        GroupMembership membership = new GroupMembership();
+        membership.setGroup(group);
+        membership.setUser(user);
+        membership.setRole(role);
+
+        groupMembershipRepository.save(membership);
     }
 }
-

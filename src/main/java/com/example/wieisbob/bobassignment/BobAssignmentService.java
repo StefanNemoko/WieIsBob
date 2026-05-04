@@ -30,7 +30,8 @@ public class BobAssignmentService {
     }
 
     public BobAssignment getOneById(Long bobAssignmentId) {
-        return bobAssignmentRepository.findById(bobAssignmentId).orElseThrow(()->new IllegalArgumentException("BobAssignment not found"));
+        return bobAssignmentRepository.findById(bobAssignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("BobAssignment not found"));
     }
 
     public void deleteById(Long bobAssignmentId) {
@@ -38,15 +39,17 @@ public class BobAssignmentService {
     }
 
     private User getNominatedUser(Group group) {
-        List<BobAssignmentCount> bobAssignmentCountList = bobAssignmentRepository.countBobAssignmentsPerUserByGroup(group);
+        List<BobAssignmentCount> counts =
+                bobAssignmentRepository.countBobAssignmentsPerUserByGroup(group.getId());
 
-        long lowestCount = bobAssignmentCountList.getFirst().getCount();
+        long lowestCount = counts.getFirst().getCount();
 
-        List<BobAssignmentCount> eligibleBobAssignment = bobAssignmentCountList.stream().filter(b -> b.getCount() == lowestCount).toList();
+        List<BobAssignmentCount> eligible = counts.stream()
+                .filter(b -> b.getCount() == lowestCount)
+                .toList();
 
-        Random random = new Random();
-        BobAssignmentCount nominatedBob = eligibleBobAssignment.get(random.nextInt(eligibleBobAssignment.size()));
+        BobAssignmentCount nominated = eligible.get(new Random().nextInt(eligible.size()));
 
-        return userService.getOneById(nominatedBob.getUserId());
+        return userService.getOneById(nominated.getUserId());
     }
 }

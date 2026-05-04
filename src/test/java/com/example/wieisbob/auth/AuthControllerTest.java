@@ -30,7 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "ALTER TABLE users ALTER COLUMN id RESTART WITH 1",
                 "ALTER TABLE bob_groups ALTER COLUMN id RESTART WITH 1",
                 "ALTER TABLE bob_assignments ALTER COLUMN id RESTART WITH 1",
-                "ALTER TABLE tokens ALTER COLUMN id RESTART WITH 1"
+                "ALTER TABLE tokens ALTER COLUMN id RESTART WITH 1",
+                "ALTER TABLE group_memberships ALTER COLUMN id RESTART WITH 1"
         },
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
         config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED)

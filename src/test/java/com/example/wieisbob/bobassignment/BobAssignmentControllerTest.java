@@ -3,10 +3,12 @@ package com.example.wieisbob.bobassignment;
 import com.example.wieisbob.BaseTest;
 import com.example.wieisbob.auth.AuthService;
 import com.example.wieisbob.auth.Token;
-import com.example.wieisbob.auth.TokenRepository;
 import com.example.wieisbob.bobassignment.dto.BobAssignmentRequest;
 import com.example.wieisbob.group.Group;
+import com.example.wieisbob.group.GroupMembership;
+import com.example.wieisbob.group.GroupMembershipRepository;
 import com.example.wieisbob.group.GroupRepository;
+import com.example.wieisbob.group.GroupRole;
 import com.example.wieisbob.group.GroupService;
 import com.example.wieisbob.user.User;
 import com.example.wieisbob.user.UserRepository;
@@ -24,8 +26,6 @@ import org.springframework.test.context.jdbc.SqlConfig;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -42,7 +42,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "ALTER TABLE users ALTER COLUMN id RESTART WITH 1",
                 "ALTER TABLE bob_groups ALTER COLUMN id RESTART WITH 1",
                 "ALTER TABLE bob_assignments ALTER COLUMN id RESTART WITH 1",
-                "ALTER TABLE tokens ALTER COLUMN id RESTART WITH 1"
+                "ALTER TABLE tokens ALTER COLUMN id RESTART WITH 1",
+                "ALTER TABLE group_memberships ALTER COLUMN id RESTART WITH 1"
         },
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD,
         config = @SqlConfig(transactionMode = SqlConfig.TransactionMode.ISOLATED)
@@ -64,7 +65,8 @@ class BobAssignmentControllerTest extends BaseTest {
     @Autowired
     private GroupRepository groupRepository;
 
-
+    @Autowired
+    private GroupMembershipRepository groupMembershipRepository;
 
     @MockitoBean
     private BobAssignmentService bobAssignmentService;
@@ -75,8 +77,6 @@ class BobAssignmentControllerTest extends BaseTest {
     private String bearerToken;
     private User authenticatedUser;
     private Group group;
-
-
 
     @BeforeEach
     void setUp() {
@@ -95,13 +95,20 @@ class BobAssignmentControllerTest extends BaseTest {
         bearerToken = jwt.getToken();
     }
 
+    private void addMembership(User user, Group group, GroupRole role) {
+        GroupMembership membership = new GroupMembership();
+        membership.setGroup(group);
+        membership.setUser(user);
+        membership.setRole(role);
+        groupMembershipRepository.save(membership);
+    }
+
     @Test
     void assignBob_OkResponse_WhenUserIsMemberOfGroup() throws Exception {
         BobAssignmentRequest request = new BobAssignmentRequest(LocalDateTime.now());
 
         // Add authenticated user as a member so authorize() passes
-        group.setMembers(new ArrayList<>(List.of(authenticatedUser)));
-        group = groupRepository.save(group);
+        addMembership(authenticatedUser, group, GroupRole.PARTICIPANT);
 
         // Create a bob assignment record
         BobAssignment bobAssignment = new BobAssignment();
@@ -110,7 +117,6 @@ class BobAssignmentControllerTest extends BaseTest {
         bobAssignment.setAssignedAt(request.assignedAt());
         bobAssignmentRepository.save(bobAssignment);
 
-        // when we call these functions with the given parameters, we should return the given data, otherwise it tries to call to a database with non existing values.
         when(groupService.getOneById(group.getId())).thenReturn(group);
         when(bobAssignmentService.assignBob(group, request.assignedAt())).thenReturn(bobAssignment);
 
@@ -121,16 +127,16 @@ class BobAssignmentControllerTest extends BaseTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1L))
                 .andExpect(jsonPath("$.groupId").value(1L))
-                .andExpect(jsonPath("$.userId").value(1L)); // Yes it is the same as authenticatedUser.getId() but, wtest should always validate A matches A and not have any logic in them.
+                .andExpect(jsonPath("$.userId").value(1L));
     }
 
     @Test
     void assignBob_UnauthorizedResponse_WhenUserIsNotMemberOfGroup() throws Exception {
         BobAssignmentRequest request = new BobAssignmentRequest(LocalDateTime.now());
 
+        // No membership record — existsByGroupIdAndUserId returns false
         when(groupService.getOneById(1L)).thenReturn(group);
 
-        // because we said the function existsByIdAndMembersId should return false, we should not be authorized.
         mockMvc.perform(post("/bobassignment/1/bob")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request))
@@ -149,9 +155,7 @@ class BobAssignmentControllerTest extends BaseTest {
 
     @Test
     void deleteBobAssignment_ReturnsOk_WhenUserIsMemberOfGroup() throws Exception {
-        // Add authenticated user as a member so authorize() passes
-        group.setMembers(new ArrayList<>(List.of(authenticatedUser)));
-        group = groupRepository.save(group);
+        addMembership(authenticatedUser, group, GroupRole.PARTICIPANT);
 
         BobAssignment bobAssignment = new BobAssignment();
         bobAssignment.setUser(authenticatedUser);
@@ -166,7 +170,7 @@ class BobAssignmentControllerTest extends BaseTest {
 
     @Test
     void deleteBobAssignment_ReturnsUnauthorized_WhenUserIsNotMemberOfGroup() throws Exception {
-        // group has no members, so existsByIdAndMembersId returns false
+        // No membership record — existsByGroupIdAndUserId returns false
         BobAssignment bobAssignment = new BobAssignment();
         bobAssignment.setUser(authenticatedUser);
         bobAssignment.setGroup(group);
